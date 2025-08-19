@@ -379,3 +379,7 @@
         margin: 0;              /* 移除左右留白 */
     }
 }
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;   /* 阻止左右捲動 */
+}

@@ -555,3 +555,15 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
         }
     }
+
+    @media (max-width: 768px) {
+  .mid-title {
+    font-size: 24px;
+    text-align: center; /* 讓它置中 */
+  }
+}
+@media (max-width: 768px) {
+  .search-inner {
+    width: 95%;  /* 預留一點空間避免超過 */
+  }
+}
