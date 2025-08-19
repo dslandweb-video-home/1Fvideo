@@ -192,7 +192,7 @@ p {
 }
 
 :root {
-    --search-width: 300px;
+    --search-width: 500px;
 }
 
 .searchbar {
@@ -231,4 +231,5 @@ p {
     color: rgb(77, 87, 146);
     white-space: nowrap;
 }
+
 
