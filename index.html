@@ -102,6 +102,8 @@
         .then(res => res.text())
         .then(html => {
           document.getElementById("slideshow-container").innerHTML = html;
+          state.slideLoaded = true;
+          trySetupSearch();
 
           // 啟用幻燈片輪播
           let slideIndex = 0;
@@ -209,9 +211,10 @@
   </script>
 
   <script>
-    // 兩塊載入完成後才綁定搜尋
-    const state = { headerLoaded: false, teachLoaded: false };
+    // ✅ 等 header、教學、幻燈片都載好，才綁「像 Ctrl+F」的找字＋跳轉
+    const state = { headerLoaded: false, teachLoaded: false, slideLoaded: false };
 
+    // 這兩段保留原本載入 header / 教學，只是最後改呼叫 trySetupSearch()
     document.addEventListener("DOMContentLoaded", () => {
       fetch("header.html")
         .then(r => r.text())
@@ -232,40 +235,55 @@
         });
     });
 
+    // ⚠️ 第 1 步已在載入「幻燈片」那段 fetch 塞了：
+    // state.slideLoaded = true; trySetupSearch();
+
     function trySetupSearch() {
-      if (!state.headerLoaded || !state.teachLoaded) return;
+      // 等三塊都到位
+      if (!state.headerLoaded || !state.teachLoaded || !state.slideLoaded) return;
 
-      const input = document.getElementById('q');                      // header 裡的搜尋框
-      const scope = document.getElementById('書寫範例教學-container'); // 要搜尋的範圍（卡片們）
-      if (!input || !scope) return;
+      const input = document.getElementById('q'); // header.html 裡的搜尋框
+      const scopeTeach = document.getElementById('書寫範例教學-container');
+      const scopeSlide = document.getElementById('slideshow-container');
+      if (!input) return;
 
-      const titleNodes = Array.from(scope.querySelectorAll('.card h4'));
+      // ① 教學卡片標題 h4（外層 .card）
+      const nodesTeach = scopeTeach ? Array.from(scopeTeach.querySelectorAll('.card h4')) : [];
+      // ② 幻燈片右欄清單項目文字（.slideshow-right 裡的 .title；外層 .link-row，捲動容器 .right-scroll）
+      const nodesSlide = scopeSlide ? Array.from(scopeSlide.querySelectorAll('.slideshow-right .title')) : [];
+
+      const nodes = [...nodesTeach, ...nodesSlide];
+
       let matches = [];
       let idx = -1;
 
-      function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+      const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
       function clearHighlights() {
-        scope.querySelectorAll('mark.hl').forEach(m => {
+        // 清掉所有 <mark class="hl">
+        document.querySelectorAll('mark.hl').forEach(m => {
           const text = document.createTextNode(m.textContent);
           const parent = m.parentNode;
           parent.replaceChild(text, m);
           parent.normalize();
         });
-        scope.querySelectorAll('.card.jumpFlash').forEach(c => c.classList.remove('jumpFlash'));
+        // 移除跳轉閃爍
+        document.querySelectorAll('.card.jumpFlash, .link-row.jumpFlash')
+          .forEach(el => el.classList.remove('jumpFlash'));
       }
 
       function highlightAndCollect(keyword) {
         matches = [];
+        if (!keyword) return;
         const re = new RegExp(`(${escapeRegExp(keyword)})`, 'ig');
-        titleNodes.forEach(h4 => {
-          const raw = h4.textContent;
-          if (!keyword || !raw.toLowerCase().includes(keyword.toLowerCase())) {
-            h4.textContent = raw; // 還原
-            return;
-          }
-          h4.innerHTML = raw.replace(re, '<mark class="hl">$1</mark>');
-          matches.push(h4.closest('.card')); // 捲到整張卡片
+
+        nodes.forEach(node => {
+          const raw = node.textContent;
+          if (!raw.toLowerCase().includes(keyword.toLowerCase())) return;
+          node.innerHTML = raw.replace(re, '<mark class="hl">$1</mark>');
+          // 依容器不同抓外層，用來跳轉
+          const carrier = node.closest('.card, .link-row') || node;
+          matches.push(carrier);
         });
       }
 
@@ -274,11 +292,19 @@
         idx = (to + matches.length) % matches.length;
         const target = matches[idx];
         target.classList.add('jumpFlash');
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // 若在右欄，改用右欄自己的捲動容器
+        const scroller = target.closest('.right-scroll');
+        if (scroller) {
+          const top = target.offsetTop - 16; // 稍微往上留點空間
+          scroller.scrollTo({ top, behavior: 'smooth' });
+        } else {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         setTimeout(() => target.classList.remove('jumpFlash'), 900);
       }
 
-      // 輸入時：標亮並捲到第一個
+      // 輸入即時標亮＋自動跳第一個
       input.addEventListener('input', () => {
         const kw = input.value.trim();
         clearHighlights();
@@ -287,18 +313,17 @@
         if (matches.length) jump(0);
       });
 
-      // Enter / Shift+Enter 導覽下一個 / 上一個
+      // Enter 下一個；Shift+Enter 上一個（焦點在輸入框時）
       document.addEventListener('keydown', (e) => {
-        const activeOnInput = document.activeElement === input;
-        if (!activeOnInput || !matches.length) return;
+        if (document.activeElement !== input || !matches.length) return;
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (e.shiftKey) jump(idx - 1);
-          else jump(idx + 1);
+          e.shiftKey ? jump(idx - 1) : jump(idx + 1);
         }
       });
     }
   </script>
+
 
   <script>
     // 點擊展開 / 點外面關閉 / ESC 關閉（含無障礙 aria）

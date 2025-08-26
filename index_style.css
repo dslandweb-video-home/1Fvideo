@@ -4,7 +4,7 @@
         background-color: #f5f5f5;
         color: #333;
     }
-    
+
 
     /* logo 置左，放大 */
     .logo-container {
@@ -557,13 +557,21 @@
     }
 
     @media (max-width: 768px) {
-  .mid-title {
-    font-size: 24px;
-    text-align: center; /* 讓它置中 */
-  }
-}
-@media (max-width: 768px) {
-  .search-inner {
-    width: 95%;  /* 預留一點空間避免超過 */
-  }
-}
+        .mid-title {
+            font-size: 24px;
+            text-align: center;
+            /* 讓它置中 */
+        }
+    }
+
+    @media (max-width: 768px) {
+        .search-inner {
+            width: 95%;
+            /* 預留一點空間避免超過 */
+        }
+    }
+
+    /* 讓右欄列也能吃到跳轉閃爍 */
+    .link-row.jumpFlash {
+        animation: jumpFlash .8s ease-out;
+    }
